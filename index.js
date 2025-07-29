@@ -38,6 +38,17 @@ const client = new MongoClient(uri, {
   },
 });
 
+// Admin
+const verifyAdmin = async (req, res, next) => {
+  const user = await usersCollection.findOne({ _id: req.user.uid });
+
+  if (!user || user.role !== "admin") {
+    return res.status(403).json({ message: "Forbidden: Admins only" });
+  }
+
+  next();
+};
+
 // Firebase Admin Token verification
 const verifyToken = async (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -48,15 +59,16 @@ const verifyToken = async (req, res, next) => {
   const token = authHeader.split(" ")[1];
   
   try {
-    // console.log("Received token:", token); // Debugging log to check the token
-    const decodedToken = await admin.auth().verifyIdToken(token); // Verifies the token from frontend
-    req.user = decodedToken; // Attaches the decoded user info
+   
+    const decodedToken = await admin.auth().verifyIdToken(token); 
+    req.user = decodedToken; 
     next();
   } catch (error) {
     console.error("Token verification failed:", error);
     res.status(403).json({ message: "Forbidden", error: error.message });
   }
 };
+
 
 
 async function run() {
@@ -831,79 +843,46 @@ app.get("/announcements/count", async (req, res) => {
   }
 });
 
-// In your GET /admin/reported-comments endpoint
-app.get("/admin/reported-comments", verifyToken, async (req, res) => {
+// get repoted comments
+app.get("/admin/reported-comments", verifyToken, verifyAdmin, async (req, res) => {
   try {
-    // Debug: Log the user object from the token
-    console.log("User making request:", req.user);
-    
-    // Check admin role
-    if (req.user.role !== "admin") {
-      console.log("Access denied for user:", req.user);
-      return res.status(403).send({ message: "Access denied. Admins only." });
-    }
-
-    const reportedComments = await commentsCollection
+    const reportedComments = await commentsCollection  // Ensure correct collection name
       .find({ isReported: true })
       .sort({ createdAt: -1 })
       .toArray();
-
+    
     res.send(reportedComments);
   } catch (error) {
-    console.error("Error in reported-comments:", error);
-    res.status(500).send({ message: "Server error", error: error.message });
+    console.error("Error fetching reported comments:", error);
+    res.status(500).send({ 
+      error: "Failed to fetch reported comments",
+      details: error.message 
+    });
   }
 });
 
-// DELETE: Remove reported comment
-app.delete("/admin/comments/:commentId", verifyToken, async (req, res) => {
-  const { commentId } = req.params;
 
-  if (req.user.role !== "admin") {
-    return res.status(403).send({ message: "Unauthorized" });
-  }
 
-  if (!ObjectId.isValid(commentId)) {
-    return res.status(400).send({ message: "Invalid Comment ID" });
-  }
-
-  try {
-    const result = await commentsCollection.deleteOne({ _id: new ObjectId(commentId) });
-    if (result.deletedCount === 0) {
-      return res.status(404).send({ message: "Comment not found" });
-    }
-
-    res.send({ message: "Comment deleted successfully" });
-  } catch (error) {
-    res.status(500).send({ message: "Failed to delete comment", error: error.message });
-  }
-});
-
-// PATCH: Dismiss report
-app.patch("/admin/comments/dismiss/:commentId", verifyToken, async (req, res) => {
-  const { commentId } = req.params;
-
-  if (req.user.role !== "admin") {
-    return res.status(403).send({ message: "Unauthorized" });
-  }
-
-  if (!ObjectId.isValid(commentId)) {
-    return res.status(400).send({ message: "Invalid Comment ID" });
-  }
-
+app.patch("/admin/comments/dismiss/:id", verifyToken, verifyAdmin, async (req, res) => {
+  const id = req.params.id;
   try {
     const result = await commentsCollection.updateOne(
-      { _id: new ObjectId(commentId) },
-      { $unset: { isReported: "", feedback: "" } }
+      { _id: new ObjectId(id) },
+      { $set: { isReported: false } }
     );
+    res.send({ message: "Report dismissed", modifiedCount: result.modifiedCount });
+  } catch (err) {
+    res.status(500).send({ error: "Failed to dismiss comment report" });
+  }
+});
 
-    if (result.matchedCount === 0) {
-      return res.status(404).send({ message: "Comment not found" });
-    }
-
-    res.send({ message: "Report dismissed successfully" });
-  } catch (error) {
-    res.status(500).send({ message: "Failed to dismiss report", error: error.message });
+app.delete("/admin/comments/:id", verifyToken, verifyAdmin, async (req, res) => {
+  const id = req.params.id;
+  try {
+    const result = await commentsCollection.deleteOne({ _id: new ObjectId(id) });
+    res.send({ message: "Comment deleted", deletedCount: result.deletedCount });
+  } catch (err) {
+    res.status(500).send({ error: "Failed to delete comment" });
   }
 });
 
