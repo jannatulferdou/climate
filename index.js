@@ -38,16 +38,7 @@ const client = new MongoClient(uri, {
   },
 });
 
-// Admin
-const verifyAdmin = async (req, res, next) => {
-  const user = await usersCollection.findOne({ _id: req.user.uid });
 
-  if (!user || user.role !== "admin") {
-    return res.status(403).json({ message: "Forbidden: Admins only" });
-  }
-
-  next();
-};
 
 // Firebase Admin Token verification
 const verifyToken = async (req, res, next) => {
@@ -87,6 +78,16 @@ async function run() {
 
       // Login route
     
+      // Admin
+const verifyAdmin = async (req, res, next) => {
+  const user = await usersCollection.findOne({ _id: req.user.uid });
+
+  if (!user || user.role !== "admin") {
+    return res.status(403).json({ message: "Forbidden: Admins only" });
+  }
+
+  next();
+};
     // User Registration
     app.post("/register", async (req, res) => {
       const { email, name, photoURL, uid } = req.body;
@@ -887,7 +888,7 @@ app.delete("/admin/comments/:id", verifyToken, verifyAdmin, async (req, res) => 
 });
 
 
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log("✅ Connected to MongoDB");
   } finally {
     // 🔁 Don't close the client during development
