@@ -773,18 +773,34 @@ app.delete("/posts/:id", verifyToken, async (req, res) => {
 
     // report
 
-    app.patch('/comments/report/:commentId', async (req, res) => {
+ app.patch('/comments/report/:commentId', verifyToken, async (req, res) => {
   const { commentId } = req.params;
   const { feedback } = req.body;
+  const reporterId = req.user.uid; // Get reporter's ID from the token
+console.log(reporterId,'report');
 
   if (!ObjectId.isValid(commentId)) {
     return res.status(400).send({ message: "Invalid Comment ID" });
   }
 
   try {
+    // Get reporter's details from users collection
+    const reporter = await usersCollection.findOne({ _id: new ObjectId(reporterId)});
+    
     const result = await commentsCollection.updateOne(
       { _id: new ObjectId(commentId) },
-      { $set: { isReported: true, feedback } }
+      { 
+        $set: { 
+          isReported: true, 
+          feedback,
+          reportedBy: {
+            name: reporter?.name || 'Anonymous',
+            email: reporter?.email || 'unknown@example.com',
+            userId: reporterId
+          },
+          reportedAt: new Date()
+        } 
+      }
     );
 
     if (result.modifiedCount === 0) {
