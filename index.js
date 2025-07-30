@@ -338,8 +338,8 @@ app.post("/create-checkout-session", verifyToken, async (req, res) => {
           quantity: 1,
         },
       ],
-      success_url: `http://localhost:5173/payment-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `http://localhost:5173/membership`,
+      success_url: `https://climate-forum-5c5e4.web.app/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `https://climate-forum-5c5e4.web.app/membership`,
       metadata: {
         userId: userId, // ✅ Save Firebase UID for later use
       },
@@ -435,20 +435,21 @@ app.patch("/admin/make-admin/:uid", verifyToken, async (req, res) => {
 
 
     //  Search posts by tag
-    app.get("/search", async (req, res) => {
-      const query = req.query.q?.toLowerCase();
-      if (!query) {
-        return res.status(400).send({ message: "Search query required" });
-      }
-      try {
-        const results = await postsCollection
-          .find({ tags: { $in: [query] } })
-          .toArray();
-        res.send(results);
-      } catch (error) {
-        res.status(500).send({ message: "Error fetching results", error });
-      }
-    });
+  // Search posts by tag
+app.get("/search", async (req, res) => {
+  const query = req.query.q?.toLowerCase();
+  if (!query) {
+    return res.status(400).send({ message: "Search query required" });
+  }
+  try {
+    const results = await postsCollection
+      .find({ tags: { $in: [query] } })
+      .toArray();
+    res.send(results);
+  } catch (error) {
+    res.status(500).send({ message: "Error fetching results", error });
+  }
+});
 
     // 🔥 Get popular posts sorted by vote difference (upVote - downVote)
     app.get("/popular-posts", async (req, res) => {
