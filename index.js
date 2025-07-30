@@ -905,6 +905,37 @@ app.delete("/admin/comments/:id", verifyToken, verifyAdmin, async (req, res) => 
   }
 });
 
+// DELETE announcement by ID (admin only)
+app.delete("/admin/announcements/:id", verifyToken, verifyAdmin, async (req, res) => {
+  const { id } = req.params;
+  if (!ObjectId.isValid(id)) return res.status(400).send({ message: "Invalid ID" });
+
+  try {
+    const result = await announcementsCollection.deleteOne({ _id: new ObjectId(id) });
+    res.send({ success: true, deletedCount: result.deletedCount });
+  } catch (error) {
+    res.status(500).send({ message: "Failed to delete announcement", error: error.message });
+  }
+});
+
+// PATCH: Update announcement
+app.patch("/admin/announcements/:id", verifyToken, verifyAdmin, async (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+
+  if (!ObjectId.isValid(id)) return res.status(400).send({ message: "Invalid ID" });
+
+  try {
+    const result = await announcementsCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updates }
+    );
+    res.send({ success: true, modifiedCount: result.modifiedCount });
+  } catch (error) {
+    res.status(500).send({ message: "Failed to update announcement", error: error.message });
+  }
+});
+
 
     // await client.db("admin").command({ ping: 1 });
     console.log("✅ Connected to MongoDB");
