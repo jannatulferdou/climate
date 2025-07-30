@@ -273,18 +273,31 @@ app.get("/admin/profile/:email", async (req, res) => {
     // GET: All users with optional search by name
 app.get("/admin/users", verifyToken, async (req, res) => {
   const search = req.query.search || "";
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
   const regex = new RegExp(search, "i");
 
   try {
+    const totalUsers = await usersCollection.countDocuments({ name: { $regex: regex } });
+
     const users = await usersCollection
       .find({ name: { $regex: regex } })
-      .project({ password: 0 }) // optional: exclude sensitive fields
+      .skip(skip)
+      .limit(limit)
+      .project({ password: 0 })
       .toArray();
-    res.send(users);
+
+    res.send({
+      users,
+      totalPages: Math.ceil(totalUsers / limit),
+      currentPage: page,
+    });
   } catch (error) {
     res.status(500).send({ message: "Error fetching users", error: error.message });
   }
 });
+
 
 
     // Logout route
@@ -917,6 +930,37 @@ app.delete("/admin/announcements/:id", verifyToken, verifyAdmin, async (req, res
     res.status(500).send({ message: "Failed to delete announcement", error: error.message });
   }
 });
+// GET: All users with optional search and pagination
+app.get("/admin/users", verifyToken, async (req, res) => {
+  const search = req.query.search || "";
+  const regex = new RegExp(search, "i");
+
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  try {
+    const [users, total] = await Promise.all([
+      usersCollection
+        .find({ name: { $regex: regex } })
+        .project({ password: 0 })
+        .skip(skip)
+        .limit(limit)
+        .toArray(),
+      usersCollection.countDocuments({ name: { $regex: regex } })
+    ]);
+
+    res.send({
+      users,
+      total,
+      currentPage: page,
+      totalPages: Math.ceil(total / limit)
+    });
+  } catch (error) {
+    res.status(500).send({ message: "Error fetching users", error: error.message });
+  }
+});
+
 
 // PATCH: Update announcement
 app.patch("/admin/announcements/:id", verifyToken, verifyAdmin, async (req, res) => {
