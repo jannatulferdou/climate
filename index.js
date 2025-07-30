@@ -773,19 +773,18 @@ app.delete("/posts/:id", verifyToken, async (req, res) => {
 
     // report
 
- app.patch('/comments/report/:commentId', verifyToken, async (req, res) => {
+app.patch('/comments/report/:commentId', verifyToken, async (req, res) => {
   const { commentId } = req.params;
   const { feedback } = req.body;
-  const reporterId = req.user.uid; // Get reporter's ID from the token
-console.log(reporterId,'report');
+  const reporterId = req.user.uid; // Firebase UID (string)
 
   if (!ObjectId.isValid(commentId)) {
     return res.status(400).send({ message: "Invalid Comment ID" });
   }
 
   try {
-    // Get reporter's details from users collection
-    const reporter = await usersCollection.findOne({ _id: new ObjectId(reporterId)});
+    // Get reporter's details from users collection using the Firebase UID directly
+    const reporter = await usersCollection.findOne({ _id: reporterId }); // No ObjectId conversion
     
     const result = await commentsCollection.updateOne(
       { _id: new ObjectId(commentId) },
@@ -809,10 +808,13 @@ console.log(reporterId,'report');
 
     res.send({ message: "Comment reported successfully", result });
   } catch (error) {
-    res.status(500).send({ message: "Error reporting comment", error: error.message });
+    console.error("Reporting error:", error);
+    res.status(500).send({ 
+      message: "Error reporting comment", 
+      error: error.message 
+    });
   }
 });
-
 // Announcementes route
 app.post("/announcements", verifyToken, async (req, res) => {
   const { authorImage, authorName, title, description } = req.body;
