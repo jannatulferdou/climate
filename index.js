@@ -123,7 +123,7 @@ const verifyAdmin = async (req, res, next) => {
     });
 
     // User Login
-  app.post("/login", async (req, res) => {
+app.post("/login", async (req, res) => {
   const { idToken, email, name, photoURL, uid } = req.body;
   
   try {
@@ -150,15 +150,19 @@ const verifyAdmin = async (req, res, next) => {
         createdAt: new Date(),
         lastLogin: new Date(),
         isMember: false,
-        role: "user"
+        role: "user" // Default role for new users
       };
       await usersCollection.insertOne(user);
     } else {
-      // Update lastLogin and adjust role based on isMember
+      // Update lastLogin but preserve existing role if admin
       const updateData = {
         lastLogin: new Date(),
-        role: user.isMember ? "member" : "user"
+        // Only update role if not admin (preserve admin status)
+        ...(user.role !== 'admin' && {
+          role: user.isMember ? "member" : "user"
+        })
       };
+      
       await usersCollection.updateOne(
         { _id: firebaseUid },
         { $set: updateData }
