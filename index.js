@@ -12,7 +12,7 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 const corsOptions = {
-  origin: 'https://climate-forum-5c5e4.web.app', 
+  origin: ['http://localhost:5173','https://climate-forum-5c5e4.web.app'], 
   credentials: true, // Allow credentials (cookies, etc.)
 };
 
@@ -172,6 +172,23 @@ const verifyAdmin = async (req, res, next) => {
   } catch (error) {
     console.error("Login error:", error);
     res.status(401).send({ message: "Authentication failed", error: error.message });
+  }
+});
+
+// GET: Get user role by email
+app.get('/users/role', verifyToken, async (req, res) => {
+  const { email } = req.query;
+  
+  try {
+    const user = await usersCollection.findOne({ email });
+    if (!user) {
+      return res.status(404).send({ message: "User not found" });
+    }
+    
+    res.send({ role: user.role || 'user' });
+  } catch (error) {
+    console.error("Error fetching user role:", error);
+    res.status(500).send({ message: "Error fetching user role" });
   }
 });
 
