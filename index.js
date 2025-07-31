@@ -176,7 +176,7 @@ const verifyAdmin = async (req, res, next) => {
 });
 
 // GET: Get user role by email
-app.get('/users/role', verifyToken, async (req, res) => {
+app.get("/users/role", verifyToken, async (req, res) => {
   const { email } = req.query;
   
   try {
@@ -185,7 +185,11 @@ app.get('/users/role', verifyToken, async (req, res) => {
       return res.status(404).send({ message: "User not found" });
     }
     
-    res.send({ role: user.role || 'user' });
+    // Make sure to return the role field
+    res.send({ 
+      role: user.role || 'user',
+      isAdmin: user.role === 'admin'
+    });
   } catch (error) {
     console.error("Error fetching user role:", error);
     res.status(500).send({ message: "Error fetching user role" });
