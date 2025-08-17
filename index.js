@@ -70,6 +70,7 @@ async function run() {
     const usersCollection = db.collection("users");
     const tagsCollection = db.collection("tags");
     const announcementsCollection = db.collection("announcements");
+    const reviewsCollection = db.collection("reviews");
 
 
     // Create indexes for better performance
@@ -879,6 +880,54 @@ app.get("/announcements/count", async (req, res) => {
     res.send({ count });
   } catch (error) {
     res.status(500).send({ message: "Failed to count announcements", error: error.message });
+  }
+});
+
+
+// Get all reviews
+app.get("/reviews", async (req, res) => {
+  try {
+    const reviews = await reviewsCollection.find().toArray();
+    res.send(reviews);
+  } catch (error) {
+    res.status(500).send({ message: "Error fetching reviews", error: error.message });
+  }
+});
+
+// Add a new review
+app.post("/reviews", verifyToken, async (req, res) => {
+  try {
+    const review = {
+      ...req.body,
+      createdAt: new Date()
+    };
+    
+    const result = await reviewsCollection.insertOne(review);
+    res.send({ success: true, reviewId: result.insertedId });
+  } catch (error) {
+    res.status(500).send({ message: "Error adding review", error: error.message });
+  }
+});
+
+// Get average rating
+app.get("/reviews/average", async (req, res) => {
+  try {
+    const result = await reviewsCollection.aggregate([
+      {
+        $group: {
+          _id: null,
+          averageRating: { $avg: "$rating" },
+          count: { $sum: 1 }
+        }
+      }
+    ]).toArray();
+    
+    res.send({
+      averageRating: result[0]?.averageRating || 0,
+      count: result[0]?.count || 0
+    });
+  } catch (error) {
+    res.status(500).send({ message: "Error calculating average", error: error.message });
   }
 });
 
