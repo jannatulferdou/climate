@@ -1037,6 +1037,40 @@ app.patch("/admin/announcements/:id", verifyToken, verifyAdmin, async (req, res)
 });
 
 
+// Stripe Payment Intent
+app.post('/create-payment-intent', async (req, res) => {
+  const { amount, currency } = req.body;
+  
+  try {
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount,
+      currency,
+    });
+
+    res.send({
+      clientSecret: paymentIntent.client_secret
+    });
+  } catch (err) {
+    res.status(500).send({ error: err.message });
+  }
+});
+
+// Save Donation Record
+app.post('/save-donation', async (req, res) => {
+  const donation = req.body;
+  
+  try {
+    // Create a donations collection in your MongoDB
+    const result = await db.collection('donations').insertOne({
+      ...donation,
+      createdAt: new Date()
+    });
+    
+    res.send({ success: true, insertedId: result.insertedId });
+  } catch (err) {
+    res.status(500).send({ error: err.message });
+  }
+});
     // await client.db("admin").command({ ping: 1 });
     console.log("✅ Connected to MongoDB");
   } finally {
